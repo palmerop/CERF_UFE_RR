@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>CERF disboursements 1997-2015</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.22.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.22.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto">
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-supported/v1.2.0/mapbox-gl-supported.js'></script>
+    <!-- map element style  -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0px;
+            height: 100%;
+            width: 100%;
+            background-color: #cfe2f7;
+        }
+    </style>
+
+    <!-- css style for popups-->
+    <style>
+        .mapboxgl-popup {
+            -webkit-filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.6));
+            filter: drop-shadow(5px 5px 10px rgba(0, 0, 0, 0.6));
+            position: absolute;
+            align-content: center;
+            max-width: 400px;
+        }
+    </style>
+    <!-- css style for text labels-->
+    <style type="text/css">
+        .label_country {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            color: #026CB6;
+            font-weight: bold;
+            font-size: 16px;
+            text-transform: uppercase;
+            padding-bottom: 0px;
+        }
+        
+        .label_amount {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            color: #666666;
+            font-size: 14px;
+        }
+        
+        .map-overlay {
+            font: 12px/20px Roboto, Arial, Helvetica, sans-serif;
+            position: absolute;
+            width: 200px;
+            top: 0;
+            left: 0;
+            padding: 10px;
+        }
+        
+        .map-overlay .map-overlay-inner {
+            background-color: #fff;
+            box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.30);
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        #UF {
+            color: red !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+
+    <div class='map-overlay top'>
+        <div id='menu' class='map-overlay-inner'>
+            <fieldset>
+                <label>
+                    <h3>Available funds by year</h3></label>
+                <input type="range" name="InputYearS" id="InputYearS" min="2006" max="2016" value="2016" step="1" oninput="yearvalue.value=InputYearS.value">
+                <output type="text" id="yearvalue" for="InputYearS">2016</output>
+            </fieldset>
+        </div>
+
+        <div id='type' class='map-overlay-inner'>
+            <label>
+                <h3>Funding window</h3></label>
+            <input id='UF' type='radio' name='rtoggle' value='UF' checked='checked'>
+            <label for='UF'>Under funded</label>
+            <input id='RR' type='radio' name='rtoggle' value='RR'>
+            <label for='RR'>Rapid Response</label>
+        </div>
+
+    </div>
+
+
+    <script>
+	
+        var SelectedYear = document.getElementById("InputYearS");
+        var SelectedType = document.getElementById("type");
+		
+		// set initial values
+		window.addEventListener('load', function(){
+		SelectedYear.value = 2016;
+		SelectedType.value = 'UF';
+		});
+
+		
+		// listen for change in slider and apply BOTH filters when it changes
+		SelectedYear.addEventListener('input', function() {
+		  map.setFilter('amount-circles', ["all", ['==', 'year', SelectedYear.value], ['==', 'type', SelectedType.value]]);
+		});
+
+		// listen for change in radio buttons and apply BOTH filters when it changes
+		SelectedType.addEventListener('change', function() {
+		  if ( document.getElementById('UF').checked === true) {
+			SelectedType.value = 'UF';
+		  }
+		  else if ( document.getElementById('RR').checked === true) {
+			SelectedType.value = 'RR';
+		  }
+
+		map.setFilter('amount-circles', ["all", ['==', 'year', SelectedYear.value], ['==', 'type', SelectedType.value]]);
+		});
+
+
+        // Create the base map
+        mapboxgl.accessToken = 'pk.eyJ1IjoicmVsaWVmd2ViIiwiYSI6IldYR2ZuV3cifQ.eSPZMZWE6UyLtO0OH_-qrw';
+
+        if (!mapboxgl.supported()) {
+            alert('Your browser does not support Mapbox GL');
+        } else {
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/reliefweb/cirmah4m2000vg2mbanhr6wqc',
+                zoom: 2,
+                minZoom: 1,
+                maxZoom: 3,
+                center: [0, 20],
+                pitch: 0
+            });
+        }
+
+        // disable map rotation using right click + drag
+        map.dragRotate.disable();
+
+        // disable map rotation using touch rotation gesture
+        map.touchZoomRotate.disableRotation();
+
+        // Add controls
+        map.addControl(new mapboxgl.Navigation({
+            position: 'top-right'
+        }));
+
+        // Loads data from Google spreadsheet
+
+        // Google Sheet URL for JSON.
+        // The format is:
+        // https://spreadsheets.google.com/feeds/list/PUT-KEY-HERE/od6/public/values?alt=json-in-script&callback=
+        // where you put your key instead of "PUT-KEY-HERE"
+        var url = 'https://spreadsheets.google.com/feeds/list/1aYJ_d5WdA1bRFgPw6k6X_EB5uYr9qZ4EGlCvQzn-it0/od6/public/basic?alt=json';
+
+        // Read data from Google spreadsheet and add proportional circles to the map
+
+        map.on('load', function () {
+
+            // load JSON
+            mapboxgl.util.getJSON(url, function (err, data) {
+                document.body.classList.remove('loading');
+                if (err) return console.warn(err);
+
+                // Create geojson empty feature data
+                var geojson = {
+                    type: 'FeatureCollection',
+                    features: []
+                };
+
+                // Parse the source JSON we'll need to do a bit of
+                // data processing to get it into the right format.
+                // The finished output looks like GeoJSON
+                data.feed.entry.forEach(function (d) {
+                    var fields = d.content.$t.split(', ');
+                    var lng = parseFloat(fields[3].split(': ')[1]);
+                    var lat = parseFloat(fields[2].split(': ')[1]);
+                    var year = fields[0].split(': ')[1];
+                    var amount = parseInt(fields[1].split(': ')[1], 10);
+                    var type = fields[4].split(': ')[1];
+                    var label = fields[5].split(': ')[1];
+
+                    // Populate the GEOJSON feature
+                    geojson.features.push({
+                        type: 'Feature',
+                        properties: {
+                            country: d.title.$t,
+                            year: year,
+                            amount: amount,
+                            type: type,
+                            label: label,
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [lng, lat]
+                        }
+                    });
+                });
+
+                // Add geojson data as a new source on the map
+                map.addSource('data', {
+                    type: 'geojson',
+                    data: geojson
+                });
+
+                // Add geojson data to the actual map as proportional circles
+                map.addLayer({
+                    id: 'amount-circles',
+                    type: 'circle',
+                    source: 'data',
+                    filter: ["all", ["==", 'year', SelectedYear.value], ['==', 'type', SelectedType.value]], // filter by year
+                    paint: {
+                        'circle-color': {
+                            property: 'type',
+                            type: 'categorical',
+                            stops: [
+			                    ['UF', 'rgba(255,197,47,1)'],
+            			        ['RR', 'rgba(46,164,221,1)']]
+                        },
+                        "circle-opacity": 0.6,
+                        'circle-radius': { //make circles proportional to the amount property
+                            property: 'amount',
+                            stops: [
+                            [{
+                                    zoom: 1,
+                                    value: 0
+                            }, 4],
+                            [{
+                                    zoom: 1,
+                                    value: 53671182
+                            }, 20],
+                            [{
+                                    zoom: 3,
+                                    value: 0
+                            }, 7],
+                            [{
+                                    zoom: 3,
+                                    value: 53671182
+                            }, 50]
+                        ]
+                        }
+                    }
+                });
+
+                // Create pop-up variable
+                var popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false
+                });
+
+
+                // When a mouse click event occurs near a point, open a popup at the location of the feature, with description HTML from its properties.
+                map.on('mousemove', function (e) {
+                    var features = map.queryRenderedFeatures(e.point, {
+                        layers: ['amount-circles']
+                    });
+
+                    map.getCanvas().style.cursor = (features.length) ? 'pointer' : '';
+
+                    if (!features.length) {
+                        popup.remove();
+                        return;
+                    }
+
+                    var feature = features[0];
+
+                    var contents = document.createElement('div');
+                    popup.setLngLat(feature.geometry.coordinates)
+                        .setHTML('<span class="label_country">' + feature.properties.country + '</span>' + '<BR><span class="label_amount">' + feature.properties.label + ' (' + feature.properties.type + ')')
+                        .addTo(map);
+                });
+
+                // Use the same approach as above to indicate that the symbols are clickable
+                // by changing the cursor style to 'pointer'.
+                map.on('mousemove', function (e) {
+                    var features = map.queryRenderedFeatures(e.point, {
+                        layers: ['amount-circles']
+                    });
+                    map.getCanvas().style.cursor = (features.length) ? 'pointer' : '';
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
